@@ -1,7 +1,7 @@
 name:                XMI
 version:             0.1.0.0
 github:              "h4ck3rm1k3/XMI"
-license:             BSD3
+license:             "GPLV3"
 author:              "James Michael DuPont"
 maintainer:          "jamesmikedupont@gmail.com"
 copyright:           "GPLV3"
