@@ -1,0 +1,51 @@
+name:                XMI
+version:             0.1.0.0
+github:              "h4ck3rm1k3/XMI"
+license:             BSD3
+author:              "James Michael DuPont"
+maintainer:          "jamesmikedupont@gmail.com"
+copyright:           "GPLV3"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Experimental
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/h4ck3rm1k3/XMI#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- parsec
+- mtl
+- syb
+
+library:
+  source-dirs: src
+
+executables:
+  XMI-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - XMI
+
+tests:
+  XMI-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - XMI
