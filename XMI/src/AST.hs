@@ -27,6 +27,7 @@ data Packaged = Class Name Abstract [Owned]
               | Enumeration Name [Literal]
               | SubPackage Package
               | Import Name [Imports]
+              | Fake
                 deriving (Typeable, Data, Eq, Show)
 
 data Literal = Literal Name

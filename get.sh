@@ -1,3 +1,9 @@
 wget https://www.omg.org/spec/UML/20161101/StandardProfile.xmi
 wget https://www.omg.org/spec/UML/20161101/UML.xmi
 wget https://www.omg.org/spec/MOF/20131001/MOF.xmi
+wget https://www.omg.org/spec/MOF/20131001/CMOFConstraints.ocl
+wget https://www.omg.org/spec/MOF/20131001/EMOFConstraints.ocl
+wget https://www.omg.org/spec/XMI/20110501/XMI-Canonical.xsd
+wget https://www.omg.org/spec/XMI/20131001/XMI.xsd
+wget https://www.omg.org/spec/OCL/20090501/EssentialOCL.emof
+wget https://www.omg.org/spec/OCL/20090501/OCL.cmof

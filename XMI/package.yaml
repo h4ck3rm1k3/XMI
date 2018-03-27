@@ -1,7 +1,7 @@
 name:                XMI
 version:             0.1.0.0
 github:              "h4ck3rm1k3/XMI"
-license:             "GPLV3"
+license:             "GPL-3"
 author:              "James Michael DuPont"
 maintainer:          "jamesmikedupont@gmail.com"
 copyright:           "GPLV3"
@@ -22,8 +22,14 @@ description:         Please see the README on Github at <https://github.com/h4ck
 dependencies:
 - base >= 4.7 && < 5
 - parsec
+#- parsec-free
 - mtl
 - syb
+- raw-strings-qq
+- hxt
+#- HaXml # -1.25.4
+- hxt-xpath
+- array
 
 library:
   source-dirs: src

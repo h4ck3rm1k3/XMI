@@ -4,7 +4,7 @@ import AST(Name, Abstract, ReadOnly, UppVal, LowVal,
             Qualified(Qualified),
             Imports (ImportRef),
             Package(Package, Foo),
-            Packaged(Class, Enumeration, SubPackage, Import ),
+            Packaged(Class, Enumeration, SubPackage, Import, Fake ),
             Literal(Literal),
             Owned(Property, Operation, Generalization),
             Parameter(InOut,Return),
@@ -25,18 +25,24 @@ import Data.List (intersperse)
 ---
 import Text.Parsec.Perm
 import Text.ParserCombinators.Parsec.Expr
-import Debug.Trace
+
 import Control.Monad
 import Control.Monad.State
-
+import Debug.Trace
+import Debug.Trace(trace, traceM)
 
 
 ---------------------------------
 data ClassTag = ClassTag { idC :: Name, nC :: Name, aC :: Abstract }
+  deriving ( Eq, Show)
 data EnumTag  = EnumTag  { idE :: Name, nE :: Name }
+  deriving (Eq, Show)
 data PropTag  = PropTag  { nP  :: Name, idP:: Name, r  :: ReadOnly, tP :: Name }
+  deriving ( Eq, Show)
 data Prop1Tag = Prop1Tag { upP :: UppVal, lwP :: LowVal, qP :: [Qualified] }
+  deriving ( Eq, Show)
 data QualTag  = QualTag  { nQ  :: Name, tQ :: Name }
+  deriving ( Eq, Show)
 
 
 --------------------------------------------------------------------------------
@@ -114,39 +120,53 @@ parser = do whiteSpace; v <- spec; eof; return v
 xmlattrs =
   xmiId
   <|> fName
-
-packageElement  =
-    brs ( do
-            reserved "packagedElement";
-            t <- xmiTy ; guard $ (t=="uml:Package");
-              --return $ aid name
-            name <- many xmlattrs
-            return name
-        )
-
+  
+--packageElement :: Parser PackagedUmlPackage
+--packageElement  =
+    
+importedPackage :: Parser Imports
 importedPackage  =
     brs1 ( do
             reserved "importedPackage";
             aid <- xmiRef
+            traceM ("imported package: " ++ show aid) 
             return (ImportRef aid)
         )
 
+  
+packageImport :: Parser Packaged -- ImportRef
 packageImport  = do
   aid <- brs ( do
                  reserved "packageImport";
                  t <- xmiTy ; guard $ (t=="uml:PackageImport");
                  aid <- xmiId
+                 traceM ("package import: " ++ show aid) 
                  return aid
              );
-  imports <- many importedPackage;
+  traceM ("before list of imported: " ++ show aid) 
+--  imports <- many importedPackage;
+  imports <- importedPackage;
+  traceM ("before end of package import: " ++ show aid) 
   brsEnd ( reserved "packageImport" );
-  return (Import aid imports)
+  traceM ("end of package import: " ++ show aid) 
+  return (Import aid [imports])
 
 umlPackage :: Parser Package
 umlPackage = do
-  name <- packageElement
-  es <- many $ ( element )
-  --brsEnd ( reserved "packagedElement" )
+  name <- brs ( do
+            reserved "packagedElement";
+            t <- xmiTy ; guard $ (t=="uml:Package");
+              --return $ aid name
+            name <- many xmlattrs
+            traceM ("package element: " ++ show name) 
+            return name
+        )
+  --es <- many $ ( packageImport )
+  traceM ("expecting element next") 
+  --es <- many element
+  es <- element
+  traceM ("got elements " ++ show es) 
+  brsEnd ( reserved "packagedElement" )
   return $ Foo
       --Package aid name es
 
@@ -168,27 +188,61 @@ subPackage = do
   u <- umlPackage
   return (SubPackage u )
 
-  
+
 element :: Parser Packaged
-element =  try (eEnum)
-           <|> try (eClass)
-           <|> try (subPackage) -- nested package
-           <|> try (packageImport) -- imported thing
-           <?> "packagedElement or something"
+element = do
+  --try (subPackage) -- nested package
+    try (subPackage) -- nested package
+      <|> try (packageImport) -- imported thing
+      <|> try (eClass)
+    --traceM ("element: " ++ show r)
+    --r
+    --case r of
+    --  Left l -> $ (Fake)
+    
+                --traceM ("subpackage failed: " ++ show l)
+        --return Fake
+      --Right val -> do
+      --  traceM ("subpackage OK: " ++ show val)
+      --  val
+
+    -- try (eEnum)
+    
+
+
+    -- <?> "packagedElement or something"
 
 
 
 eClass :: Parser Packaged
-eClass  = try (clSimple0) <|> try  (clComp)  <?> "class"
+eClass  =
+  --try (clSimple0) <|>
+  --try  (clComp)  <?> "class"
+  clComp  <?> "class"
 
-hdClass  = brs  (do tagPack; t <- xmiTy; guard $ (t=="uml:Class"); x <- xmlCl; return x )
+hdClass  = brs  (do
+                    traceM ("class start ")
+                    tagPack
+                    t <- xmiTy
+                    traceM ("hrd 1: " ++ show t)
+                    guard $ (t=="uml:Class")
+                    traceM ("hrd class: " ++ show t)
+                    x <- xmlCl
+                    traceM ("hrd name: " ++ show x)
+                    return x
+                )
 hdClass1 = brs1 (do tagPack; t <- xmiTy; guard $ (t=="uml:Class"); x <- xmlCl; return x )
 
 clSimple0:: Parser Packaged
 clSimple0 =  do p  <- hdClass1; return (Class (idC p) (aC p) [])
 
 clComp   :: Parser Packaged
-clComp    =  do p  <- hdClass; os <- many ownedClass; 
+clComp    =  do p  <- hdClass;
+                traceM ("hrd class1: " ++ show p)
+                --os <- many ownedClass;
+                oc1 <- ownedClass;
+                traceM ("owned class1: " ++ show oc1)
+                let os = [oc1]
                 brsEnd (tagPack); return (Class (idC p) (aC p) os)
 
 eEnum :: Parser Packaged
@@ -227,7 +281,10 @@ operation =
 general :: Parser Owned
 general =
      do gl <- brs1 (do  string "generalization "  ; t <- xmiTy; 
-                        guard $ (t=="uml:Generalization"); g <- fGrl; return g )
+                        guard $ (t=="uml:Generalization");
+                        g <- xmiId
+                        --g <- fGrl;
+                        return g )
         return (Generalization gl)
 
 
@@ -289,7 +346,9 @@ primitive =
 
 ---------- XMI auxiliar functions -----------
 
-tagPack = reserved "packagedElement" <|> reserved "ownedMember"
+tagPack = reserved "packagedElement"
+
+  -- <|> reserved "ownedMember"
 
 
 xmlns =  do     reserved "xmlns:xmi"<|> reserved "xmlns:uml"; 
