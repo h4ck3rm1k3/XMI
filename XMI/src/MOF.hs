@@ -2,11 +2,16 @@
 
 module MOF where
 
---import Text.XML.HaXml.XmlContent
----import Text.XML.HaXml.Types
---import Text.XML.HaXml.OneOfN
+import Text.XML.HaXml.XmlContent
+import Text.XML.HaXml.Types
+import Text.XML.HaXml.OneOfN
 
+xmlns = defaultA fromAttrToStr "" "xmlns"
+possible_attr x = possibleA fromAttrToStr x 
+def_attr x = definiteA fromAttrToStr x
 
+xmi_spec = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi"
+tag x =  def_attr "mofext:Tag" x 
 {-Type decls-}
 
 data Xmi'XMI = Xmi'XMI Xmi'XMI_Attrs PackagedElement
@@ -15,7 +20,7 @@ data Xmi'XMI = Xmi'XMI Xmi'XMI_Attrs PackagedElement
 data Xmi'XMI_Attrs = Xmi'XMI_Attrs
     { xmi'XMIXmlns'xmi :: (Defaultable String)
     } deriving (Eq,Show)
-data Mofext'Tag = Mofext'Tag Mofext'Tag_Attrs Element
+data Mofext'Tag = Mofext'Tag Mofext'Tag_Attrs XMIElement
                 deriving (Eq,Show)
 data Mofext'Tag_Attrs = Mofext'Tag_Attrs
     { mofext'TagXmlns'mofext :: (Defaultable String)
@@ -25,7 +30,7 @@ data Mofext'Tag_Attrs = Mofext'Tag_Attrs
     , mofext'TagXmi'id :: String
     , mofext'TagXmi'type :: String
     } deriving (Eq,Show)
-data Element = Element
+data XMIElement = XMIElement
     { elementXmlns :: (Defaultable String)
     , elementXmlns'xmi :: (Defaultable String)
     , elementXmi'idref :: String
@@ -178,23 +183,6 @@ data LowerValue = LowerValue
     , lowerValueXmi'type :: String
     } deriving (Eq,Show)
 
-data List1 t = List1 t
-data Foo = Foo | Elem
-data Defaultable x = Defaultable x
-data OneOf3 x y z  = OneOf3 x y z
-data OneOf2 x y = OneOf2 x y
-
-class HTypeable t where
-  toHType :: Foo t
-
-class XmlContent t where
-  toContents :: t Foo
-  parseContents :: t Foo
-
-class XmlAttributes t where
-  fromAttrs :: t Foo
-  toAttrs :: t Foo
-  
 {-Instance decls-}
 
 instance HTypeable Xmi'XMI where
@@ -211,7 +199,7 @@ instance XmlContent Xmi'XMI where
 instance XmlAttributes Xmi'XMI_Attrs where
     fromAttrs as =
         Xmi'XMI_Attrs
-          { xmi'XMIXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
+          { xmi'XMIXmlns'xmi = xmi_spec as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns:xmi" (xmi'XMIXmlns'xmi v)
@@ -231,11 +219,11 @@ instance XmlAttributes Mofext'Tag_Attrs where
     fromAttrs as =
         Mofext'Tag_Attrs
           { mofext'TagXmlns'mofext = defaultA fromAttrToStr "http://www.omg.org/spec/MOF/20131001" "xmlns:mofext" as
-          , mofext'TagXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , mofext'TagName = definiteA fromAttrToStr "mofext:Tag" "name" as
-          , mofext'TagValue = definiteA fromAttrToStr "mofext:Tag" "value" as
-          , mofext'TagXmi'id = definiteA fromAttrToStr "mofext:Tag" "xmi:id" as
-          , mofext'TagXmi'type = definiteA fromAttrToStr "mofext:Tag" "xmi:type" as
+          , mofext'TagXmlns'xmi = xmi_spec as
+          , mofext'TagName = tag "name" as
+          , mofext'TagValue = tag "value" as
+          , mofext'TagXmi'id = tag "xmi:id" as
+          , mofext'TagXmi'type = tag "xmi:type" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns:mofext" (mofext'TagXmlns'mofext v)
@@ -246,21 +234,21 @@ instance XmlAttributes Mofext'Tag_Attrs where
         , toAttrFrStr "xmi:type" (mofext'TagXmi'type v)
         ]
 
-instance HTypeable Element where
+instance HTypeable XMIElement where
     toHType x = Defined "element" [] []
-instance XmlContent Element where
+instance XmlContent XMIElement where
     toContents as =
         [CElem (Elem (N "element") (toAttrs as) []) ()]
     parseContents = do
         { (Elem _ as []) <- element ["element"]
         ; return (fromAttrs as)
         } `adjustErr` ("in <element>, "++)
-instance XmlAttributes Element where
+instance XmlAttributes XMIElement where
     fromAttrs as =
-        Element
-          { elementXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , elementXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , elementXmi'idref = definiteA fromAttrToStr "element" "xmi:idref" as
+        XMIElement
+          { elementXmlns = xmlns as
+          , elementXmlns'xmi = xmi_spec as
+          , elementXmi'idref = def_attr "element" "xmi:idref" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (elementXmlns v)
@@ -290,13 +278,13 @@ instance XmlContent PackagedElement where
 instance XmlAttributes PackagedElement_Attrs where
     fromAttrs as =
         PackagedElement_Attrs
-          { packagedElementXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , packagedElementXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , packagedElementURI = possibleA fromAttrToStr "URI" as
-          , packagedElementIsAbstract = possibleA fromAttrToStr "isAbstract" as
-          , packagedElementName = definiteA fromAttrToStr "packagedElement" "name" as
-          , packagedElementXmi'id = definiteA fromAttrToStr "packagedElement" "xmi:id" as
-          , packagedElementXmi'type = definiteA fromAttrToStr "packagedElement" "xmi:type" as
+          { packagedElementXmlns = xmlns as
+          , packagedElementXmlns'xmi = xmi_spec as
+          , packagedElementURI = possible_attr "URI" as
+          , packagedElementIsAbstract = possible_attr "isAbstract" as
+          , packagedElementName = def_attr "packagedElement" "name" as
+          , packagedElementXmi'id = def_attr "packagedElement" "xmi:id" as
+          , packagedElementXmi'type = def_attr "packagedElement" "xmi:type" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (packagedElementXmlns v)
@@ -321,10 +309,10 @@ instance XmlContent PackageImport where
 instance XmlAttributes PackageImport_Attrs where
     fromAttrs as =
         PackageImport_Attrs
-          { packageImportXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , packageImportXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , packageImportXmi'id = definiteA fromAttrToStr "packageImport" "xmi:id" as
-          , packageImportXmi'type = definiteA fromAttrToStr "packageImport" "xmi:type" as
+          { packageImportXmlns = xmlns as
+          , packageImportXmlns'xmi = xmi_spec as
+          , packageImportXmi'id = def_attr "packageImport" "xmi:id" as
+          , packageImportXmi'type = def_attr "packageImport" "xmi:type" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (packageImportXmlns v)
@@ -346,10 +334,10 @@ instance XmlContent PackageMerge where
 instance XmlAttributes PackageMerge_Attrs where
     fromAttrs as =
         PackageMerge_Attrs
-          { packageMergeXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , packageMergeXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , packageMergeXmi'id = definiteA fromAttrToStr "packageMerge" "xmi:id" as
-          , packageMergeXmi'type = definiteA fromAttrToStr "packageMerge" "xmi:type" as
+          { packageMergeXmlns = xmlns as
+          , packageMergeXmlns'xmi = xmi_spec as
+          , packageMergeXmi'id = def_attr "packageMerge" "xmi:id" as
+          , packageMergeXmi'type = def_attr "packageMerge" "xmi:type" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (packageMergeXmlns v)
@@ -370,9 +358,9 @@ instance XmlContent MemberEnd where
 instance XmlAttributes MemberEnd where
     fromAttrs as =
         MemberEnd
-          { memberEndXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , memberEndXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , memberEndXmi'idref = definiteA fromAttrToStr "memberEnd" "xmi:idref" as
+          { memberEndXmlns = xmlns as
+          , memberEndXmlns'xmi = xmi_spec as
+          , memberEndXmi'idref = def_attr "memberEnd" "xmi:idref" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (memberEndXmlns v)
@@ -392,9 +380,9 @@ instance XmlContent NavigableOwnedEnd where
 instance XmlAttributes NavigableOwnedEnd where
     fromAttrs as =
         NavigableOwnedEnd
-          { navigableOwnedEndXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , navigableOwnedEndXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , navigableOwnedEndXmi'idref = definiteA fromAttrToStr "navigableOwnedEnd" "xmi:idref" as
+          { navigableOwnedEndXmlns = xmlns as
+          , navigableOwnedEndXmlns'xmi = xmi_spec as
+          , navigableOwnedEndXmi'idref = def_attr "navigableOwnedEnd" "xmi:idref" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (navigableOwnedEndXmlns v)
@@ -418,13 +406,13 @@ instance XmlContent OwnedEnd where
 instance XmlAttributes OwnedEnd_Attrs where
     fromAttrs as =
         OwnedEnd_Attrs
-          { ownedEndXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , ownedEndXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , ownedEndAggregation = possibleA fromAttrToStr "aggregation" as
-          , ownedEndName = definiteA fromAttrToStr "ownedEnd" "name" as
-          , ownedEndVisibility = definiteA fromAttrToStr "ownedEnd" "visibility" as
-          , ownedEndXmi'id = definiteA fromAttrToStr "ownedEnd" "xmi:id" as
-          , ownedEndXmi'type = definiteA fromAttrToStr "ownedEnd" "xmi:type" as
+          { ownedEndXmlns = xmlns as
+          , ownedEndXmlns'xmi = xmi_spec as
+          , ownedEndAggregation = possible_attr "aggregation" as
+          , ownedEndName = def_attr "ownedEnd" "name" as
+          , ownedEndVisibility = def_attr "ownedEnd" "visibility" as
+          , ownedEndXmi'id = def_attr "ownedEnd" "xmi:id" as
+          , ownedEndXmi'type = def_attr "ownedEnd" "xmi:type" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (ownedEndXmlns v)
@@ -449,10 +437,10 @@ instance XmlContent Generalization where
 instance XmlAttributes Generalization_Attrs where
     fromAttrs as =
         Generalization_Attrs
-          { generalizationXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , generalizationXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , generalizationXmi'id = definiteA fromAttrToStr "generalization" "xmi:id" as
-          , generalizationXmi'type = definiteA fromAttrToStr "generalization" "xmi:type" as
+          { generalizationXmlns = xmlns as
+          , generalizationXmlns'xmi = xmi_spec as
+          , generalizationXmi'id = def_attr "generalization" "xmi:id" as
+          , generalizationXmi'type = def_attr "generalization" "xmi:type" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (generalizationXmlns v)
@@ -477,13 +465,13 @@ instance XmlContent OwnedAttribute where
 instance XmlAttributes OwnedAttribute_Attrs where
     fromAttrs as =
         OwnedAttribute_Attrs
-          { ownedAttributeXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , ownedAttributeXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , ownedAttributeIsDerived = possibleA fromAttrToStr "isDerived" as
-          , ownedAttributeName = definiteA fromAttrToStr "ownedAttribute" "name" as
-          , ownedAttributeVisibility = definiteA fromAttrToStr "ownedAttribute" "visibility" as
-          , ownedAttributeXmi'id = definiteA fromAttrToStr "ownedAttribute" "xmi:id" as
-          , ownedAttributeXmi'type = definiteA fromAttrToStr "ownedAttribute" "xmi:type" as
+          { ownedAttributeXmlns = xmlns as
+          , ownedAttributeXmlns'xmi = xmi_spec as
+          , ownedAttributeIsDerived = possible_attr "isDerived" as
+          , ownedAttributeName = def_attr "ownedAttribute" "name" as
+          , ownedAttributeVisibility = def_attr "ownedAttribute" "visibility" as
+          , ownedAttributeXmi'id = def_attr "ownedAttribute" "xmi:id" as
+          , ownedAttributeXmi'type = def_attr "ownedAttribute" "xmi:type" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (ownedAttributeXmlns v)
@@ -508,13 +496,13 @@ instance XmlContent OwnedOperation where
 instance XmlAttributes OwnedOperation_Attrs where
     fromAttrs as =
         OwnedOperation_Attrs
-          { ownedOperationXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , ownedOperationXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , ownedOperationIsQuery = possibleA fromAttrToStr "isQuery" as
-          , ownedOperationName = definiteA fromAttrToStr "ownedOperation" "name" as
-          , ownedOperationVisibility = definiteA fromAttrToStr "ownedOperation" "visibility" as
-          , ownedOperationXmi'id = definiteA fromAttrToStr "ownedOperation" "xmi:id" as
-          , ownedOperationXmi'type = definiteA fromAttrToStr "ownedOperation" "xmi:type" as
+          { ownedOperationXmlns = xmlns as
+          , ownedOperationXmlns'xmi = xmi_spec as
+          , ownedOperationIsQuery = possible_attr "isQuery" as
+          , ownedOperationName = def_attr "ownedOperation" "name" as
+          , ownedOperationVisibility = def_attr "ownedOperation" "visibility" as
+          , ownedOperationXmi'id = def_attr "ownedOperation" "xmi:id" as
+          , ownedOperationXmi'type = def_attr "ownedOperation" "xmi:type" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (ownedOperationXmlns v)
@@ -538,10 +526,10 @@ instance XmlContent ImportedPackage where
 instance XmlAttributes ImportedPackage where
     fromAttrs as =
         ImportedPackage
-          { importedPackageXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , importedPackageXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , importedPackageHref = possibleA fromAttrToStr "href" as
-          , importedPackageXmi'idref = possibleA fromAttrToStr "xmi:idref" as
+          { importedPackageXmlns = xmlns as
+          , importedPackageXmlns'xmi = xmi_spec as
+          , importedPackageHref = possible_attr "href" as
+          , importedPackageXmi'idref = possible_attr "xmi:idref" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (importedPackageXmlns v)
@@ -562,10 +550,10 @@ instance XmlContent MergedPackage where
 instance XmlAttributes MergedPackage where
     fromAttrs as =
         MergedPackage
-          { mergedPackageXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , mergedPackageXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , mergedPackageHref = possibleA fromAttrToStr "href" as
-          , mergedPackageXmi'idref = possibleA fromAttrToStr "xmi:idref" as
+          { mergedPackageXmlns = xmlns as
+          , mergedPackageXmlns'xmi = xmi_spec as
+          , mergedPackageHref = possible_attr "href" as
+          , mergedPackageXmi'idref = possible_attr "xmi:idref" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (mergedPackageXmlns v)
@@ -586,10 +574,10 @@ instance XmlContent General where
 instance XmlAttributes General where
     fromAttrs as =
         General
-          { generalXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , generalXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , generalHref = possibleA fromAttrToStr "href" as
-          , generalXmi'idref = possibleA fromAttrToStr "xmi:idref" as
+          { generalXmlns = xmlns as
+          , generalXmlns'xmi = xmi_spec as
+          , generalHref = possible_attr "href" as
+          , generalXmi'idref = possible_attr "xmi:idref" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (generalXmlns v)
@@ -614,14 +602,14 @@ instance XmlContent OwnedParameter where
 instance XmlAttributes OwnedParameter_Attrs where
     fromAttrs as =
         OwnedParameter_Attrs
-          { ownedParameterXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , ownedParameterXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , ownedParameterDirection = possibleA fromAttrToStr "direction" as
-          , ownedParameterIsStream = possibleA fromAttrToStr "isStream" as
-          , ownedParameterName = definiteA fromAttrToStr "ownedParameter" "name" as
-          , ownedParameterVisibility = definiteA fromAttrToStr "ownedParameter" "visibility" as
-          , ownedParameterXmi'id = definiteA fromAttrToStr "ownedParameter" "xmi:id" as
-          , ownedParameterXmi'type = definiteA fromAttrToStr "ownedParameter" "xmi:type" as
+          { ownedParameterXmlns = xmlns as
+          , ownedParameterXmlns'xmi = xmi_spec as
+          , ownedParameterDirection = possible_attr "direction" as
+          , ownedParameterIsStream = possible_attr "isStream" as
+          , ownedParameterName = def_attr "ownedParameter" "name" as
+          , ownedParameterVisibility = def_attr "ownedParameter" "visibility" as
+          , ownedParameterXmi'id = def_attr "ownedParameter" "xmi:id" as
+          , ownedParameterXmi'type = def_attr "ownedParameter" "xmi:type" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (ownedParameterXmlns v)
@@ -646,10 +634,10 @@ instance XmlContent Type where
 instance XmlAttributes Type where
     fromAttrs as =
         Type
-          { typeXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , typeXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , typeHref = possibleA fromAttrToStr "href" as
-          , typeXmi'idref = possibleA fromAttrToStr "xmi:idref" as
+          { typeXmlns = xmlns as
+          , typeXmlns'xmi = xmi_spec as
+          , typeHref = possible_attr "href" as
+          , typeXmi'idref = possible_attr "xmi:idref" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (typeXmlns v)
@@ -670,9 +658,9 @@ instance XmlContent Association where
 instance XmlAttributes Association where
     fromAttrs as =
         Association
-          { associationXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , associationXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , associationXmi'idref = definiteA fromAttrToStr "association" "xmi:idref" as
+          { associationXmlns = xmlns as
+          , associationXmlns'xmi = xmi_spec as
+          , associationXmi'idref = def_attr "association" "xmi:idref" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (associationXmlns v)
@@ -692,8 +680,8 @@ instance XmlContent SubsettedProperty where
 instance XmlAttributes SubsettedProperty where
     fromAttrs as =
         SubsettedProperty
-          { subsettedPropertyXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , subsettedPropertyHref = definiteA fromAttrToStr "subsettedProperty" "href" as
+          { subsettedPropertyXmlns = xmlns as
+          , subsettedPropertyHref = def_attr "subsettedProperty" "href" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (subsettedPropertyXmlns v)
@@ -712,11 +700,11 @@ instance XmlContent UpperValue where
 instance XmlAttributes UpperValue where
     fromAttrs as =
         UpperValue
-          { upperValueXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , upperValueXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , upperValueValue = definiteA fromAttrToStr "upperValue" "value" as
-          , upperValueXmi'id = definiteA fromAttrToStr "upperValue" "xmi:id" as
-          , upperValueXmi'type = definiteA fromAttrToStr "upperValue" "xmi:type" as
+          { upperValueXmlns = xmlns as
+          , upperValueXmlns'xmi = xmi_spec as
+          , upperValueValue = def_attr "upperValue" "value" as
+          , upperValueXmi'id = def_attr "upperValue" "xmi:id" as
+          , upperValueXmi'type = def_attr "upperValue" "xmi:type" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (upperValueXmlns v)
@@ -738,11 +726,11 @@ instance XmlContent LowerValue where
 instance XmlAttributes LowerValue where
     fromAttrs as =
         LowerValue
-          { lowerValueXmlns = defaultA fromAttrToStr "" "xmlns" as
-          , lowerValueXmlns'xmi = defaultA fromAttrToStr "http://www.omg.org/spec/XMI/20131001" "xmlns:xmi" as
-          , lowerValueValue = possibleA fromAttrToStr "value" as
-          , lowerValueXmi'id = definiteA fromAttrToStr "lowerValue" "xmi:id" as
-          , lowerValueXmi'type = definiteA fromAttrToStr "lowerValue" "xmi:type" as
+          { lowerValueXmlns = xmlns as
+          , lowerValueXmlns'xmi = xmi_spec as
+          , lowerValueValue = possible_attr "value" as
+          , lowerValueXmi'id = def_attr "lowerValue" "xmi:id" as
+          , lowerValueXmi'type = def_attr "lowerValue" "xmi:type" as
           }
     toAttrs v = catMaybes 
         [ defaultToAttr toAttrFrStr "xmlns" (lowerValueXmlns v)

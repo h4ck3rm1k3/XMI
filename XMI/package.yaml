@@ -27,7 +27,7 @@ dependencies:
 - syb
 - raw-strings-qq
 - hxt
-#- HaXml # -1.25.4
+- HaXml # -1.25.4
 - hxt-xpath
 - array
 
